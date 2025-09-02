@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:views="clr-namespace:WebCam.Views"
+             xmlns:viewModels="clr-namespace:WebCam.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="WebCam.WebCam"
+             x:DataType="viewModels:WebCamViewModel"
+             DataContext="{Binding RelativeSource={RelativeSource Self}}">
+	<Design.DataContext>
+		<viewModels:WebCamViewModel/>
+	</Design.DataContext>
+
+	<Grid>
+		<views:WebCamRenderCanvas
+			DataContext="{CompiledBinding }"/>
+	</Grid>
+</UserControl>

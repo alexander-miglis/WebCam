@@ -1,0 +1,76 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	  <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="yolo11m-pose.onnx" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Include="yolo11m-pose.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Skia" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.0" />    
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" Include="Avalonia.Diagnostics" Version="11.2.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="Emgu.CV" Version="4.9.0.5494" />
+    <PackageReference Include="Emgu.CV.runtime.windows" Version="4.9.0.5494" />
+    <PackageReference Include="Emgu.CV.runtime.windows.cuda" Version="4.4.0.4099" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.0" />
+    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.Debug.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.Debug.pdb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.pdb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.Debug.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.Debug.pdb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.pdb" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="C:\Users\alexa\.nuget\packages\microsoft.ai.directml\1.15.4\build\..\bin\x64-win\DirectML.Debug.dll" />
+  </ItemGroup>
+</Project>
