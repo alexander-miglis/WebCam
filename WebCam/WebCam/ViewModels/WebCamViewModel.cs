@@ -1,4 +1,4 @@
-﻿using Emgu.CV;
+using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -89,9 +89,6 @@ public class WebCamViewModel
 
 		_session = new InferenceSession("yolo11m-pose.onnx", options);
 		_inputName = _session.InputMetadata.Keys.First();
-
-
-
 	}
 
 	private SKBitmap? _webCamImage;
@@ -105,7 +102,8 @@ public class WebCamViewModel
 			lock (_lock)
 			{
 				MatToSkBitmapRGB(frame);
-				//_sqImage = MakeSquare(_webCamImage, 640);
+
+				// _sqImage = MakeSquare(_webCamImage, 640);
 				var tensorData = ImageToTensor(_webCamImage);
 				var inputs = new List<NamedOnnxValue>
 				{
@@ -114,18 +112,18 @@ public class WebCamViewModel
 				using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run(inputs);
 				var outputTensor = results.First().AsTensor<float>();
 				_detections = ExtractKeypoints(outputTensor);
-			}
 
-			// Increment frame count
-			_frameCount++;
+				// Increment frame count
+				_frameCount++;
 
-			// Calculate FPS every second
-			if (_stopwatch.ElapsedMilliseconds >= 1000)
-			{
-				_fps = _frameCount / (_stopwatch.ElapsedMilliseconds / 1000.0);
-				_frameCount = 0; // Reset frame count
-				_stopwatch.Restart(); // Restart stopwatch for the next interval
-				Console.WriteLine($"FPS: {_fps:F2}"); // Print or store FPS
+				// Calculate FPS every second
+				if (_stopwatch.ElapsedMilliseconds >= 1000)
+				{
+					_fps = _frameCount / (_stopwatch.ElapsedMilliseconds / 1000.0);
+					_frameCount = 0; // Reset frame count
+					_stopwatch.Restart(); // Restart stopwatch for the next interval
+					Console.WriteLine($"FPS: {_fps:F2}"); // Print or store FPS
+				}
 			}
 		}
 	}
@@ -138,20 +136,42 @@ public class WebCamViewModel
 		CvInvoke.CvtColor(frame, _rgbFrame, ColorConversion.Bgr2Rgb);
 
 		// Only create a new bitmap if necessary
-		//if (_webCamImage == null || _webCamImage.Width != frame.Width || _webCamImage.Height != frame.Height || _webCamImage.ColorType != SKColorType.Rgb888x)
 		if (_webCamImage == null)
 		{
-			SKImageInfo info = new SKImageInfo(_rgbFrame.Width, _rgbFrame.Height, SKColorType.Rgb888x);
+			// Use RGBA8888 for predictable 4-byte pixels and set alpha to 255 during copy
+			SKImageInfo info = new SKImageInfo(_rgbFrame.Width, _rgbFrame.Height, SKColorType.Rgba8888, SKAlphaType.Opaque);
 			_webCamImage = new SKBitmap(info);
-			_imageSize = _rgbFrame.Width * _rgbFrame.Height * 3;
+			_imageSize = _rgbFrame.Width * _rgbFrame.Height * 4;
 		}
-			
-		// Access the Mat data and SKBitmap data directly using pointers
-		byte* srcPtr = (byte*)_rgbFrame.DataPointer.ToPointer();
-		byte* destPtr = (byte*)_webCamImage.GetPixels().ToPointer();
 
-		// Copy the RGB data directly in one block
-		Buffer.MemoryCopy(srcPtr, destPtr, _imageSize, _imageSize);
+		// Access the Mat data and SKBitmap data directly using pointers
+		byte* srcPtrBase = (byte*)_rgbFrame.DataPointer.ToPointer();
+		byte* destPtrBase = (byte*)_webCamImage.GetPixels().ToPointer();
+
+		// Compute strides to handle any row padding
+		int srcStride = (int)_rgbFrame.Step; // bytes per row in the Mat (RGB888)
+		int destStride = _webCamImage.Info.RowBytes; // bytes per row in the SKBitmap (RGBA8888)
+		int width = _rgbFrame.Width;
+		int height = _rgbFrame.Height;
+
+		for (int y = 0; y < height; y++)
+		{
+			byte* srcRow = srcPtrBase + (y * srcStride);
+			byte* dstRow = destPtrBase + (y * destStride);
+
+			byte* s = srcRow;
+			byte* d = dstRow;
+			for (int x = 0; x < width; x++)
+			{
+				// source is RGB
+				d[0] = s[0]; // R
+				d[1] = s[1]; // G
+				d[2] = s[2]; // B
+				d[3] = 255;  // A
+				s += 3;
+				d += 4;
+			}
+		}
 	}
 
 	private unsafe Tensor<float> ImageToTensor(SKBitmap image)
@@ -164,9 +184,10 @@ public class WebCamViewModel
 		// Initialize tensor for 640x640 region (filled with zeros by default for black padding)
 		var input = new DenseTensor<float>(new[] { 1, 3, targetHeight, targetWidth });
 
-		// Get a pointer to the pixel data
-		byte* srcPtr = (byte*)image.GetPixels().ToPointer();
-		int bytesPerPixel = 3;  // 3 bytes per pixel in Rgb888 format (R, G, B)
+		// Get a pointer to the pixel data and respect row bytes/bytes-per-pixel
+		byte* srcPtrBase = (byte*)image.GetPixels().ToPointer();
+		int bytesPerPixel = image.Info.BytesPerPixel;  // Expecting 4 for RGBA8888, but read channels by color type
+		int srcStride = image.Info.RowBytes;
 
 		// Set up a span to access the tensor data efficiently
 		Span<float> tensorSpan = input.Buffer.Span;
@@ -176,18 +197,18 @@ public class WebCamViewModel
 		{
 			for (int x = 0; x < imageWidth; x++)
 			{
-				// Calculate the pixel index in the source pointer
-				int pixelIndex = (y * imageWidth + x) * bytesPerPixel;
+				// Calculate the pixel index in the source pointer accounting for stride
+				int pixelIndex = (y * srcStride) + (x * bytesPerPixel);
 
 				// Calculate tensor index for each color channel
 				int tensorIndexR = (0 * targetHeight * targetWidth) + (y * targetWidth + x);
 				int tensorIndexG = (1 * targetHeight * targetWidth) + (y * targetWidth + x);
 				int tensorIndexB = (2 * targetHeight * targetWidth) + (y * targetWidth + x);
 
-				// Copy R, G, and B channels to the respective tensor positions
-				tensorSpan[tensorIndexR] = srcPtr[pixelIndex] / 255f;         // R channel
-				tensorSpan[tensorIndexG] = srcPtr[pixelIndex + 1] / 255f;     // G channel
-				tensorSpan[tensorIndexB] = srcPtr[pixelIndex + 2] / 255f;     // B channel
+				// Read channels assuming RGBA8888 (R,G,B,A)
+				tensorSpan[tensorIndexR] = srcPtrBase[pixelIndex + 0] / 255f; // R
+				tensorSpan[tensorIndexG] = srcPtrBase[pixelIndex + 1] / 255f; // G
+				tensorSpan[tensorIndexB] = srcPtrBase[pixelIndex + 2] / 255f; // B
 			}
 		}
 
@@ -240,7 +261,7 @@ public class WebCamViewModel
 
 			int detectionId = matchedDetection != null ? matchedDetection.Id : _idCounter++;
 
-			// if newDetections contains ID, fdont add it
+			// if newDetections contains ID, don't add it
 			if (newDetections.Any(d => d.Id == detectionId)) continue;
 
 			// Add new detection with bounding box, keypoints, and ID
@@ -252,7 +273,6 @@ public class WebCamViewModel
 
 		return newDetections;
 	}
-
 
 	private Detection? FindMatchingDetection(SKRect newBox, List<Detection> previousDetections, float thresholdDistance = 50.0f)
 	{
